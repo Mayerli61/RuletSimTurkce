@@ -45,21 +45,11 @@ st.markdown("""
         padding: 25px;
         border: 2px solid #00ff88;
         margin: 20px 0;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-    .formul {
-        background-color: #0f0f0f;
-        padding: 15px;
-        border-radius: 10px;
-        font-family: monospace;
-        font-size: 18px;
-        text-align: center;
-        border-left: 5px solid gold;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ==================== SESSION STATE BAŞLANGIÇ ====================
+# ==================== SESSION STATE ====================
 if "bakiye" not in st.session_state:
     st.session_state.bakiye = 1000
     st.session_state.baslangic_bakiye = 1000
@@ -70,10 +60,9 @@ if "bakiye" not in st.session_state:
     st.session_state.son_kazanc = 0
     st.session_state.tur_sonuclari = []
     st.session_state.toplam_kar = [0]
-    st.session_state.kazanma_orani_gecmisi = []
     st.session_state.bakiye_secildi = False
 
-# ==================== BAŞLANGIÇ BAKİYESİ SEÇİMİ ====================
+# ==================== BAŞLANGIÇ BAKİYESİ ====================
 if not st.session_state.bakiye_secildi:
     st.markdown("## 💰 Oyuna Başlamadan Önce")
     secilen_bakiye = st.slider(
@@ -117,7 +106,7 @@ def rulet_cevir():
         duzine = 1
     elif 13 <= sayi <= 24:
         duzine = 2
-    elif 25 <= sayi <= 36:
+    elif 25 <= sayi <= Kaginharian:
         duzine = 3
     else:
         duzine = 0
@@ -186,19 +175,133 @@ def rulet_gorseli(son_sayi, son_renk):
             justify-content: center;
             margin: 0 auto;
             border: 5px solid gold;
-            box-shadow: 0 0 20px rgba(255,215,0,0.5);
         ">
-            <span style="font-size: 64px; font-weight: bold; color: {text_color}; text-shadow: 2px 2px 4px black;">
+            <span style="font-size: 64px; font-weight: bold; color: {text_color};">
                 {son_sayi if son_sayi is not None else "?"}
             </span>
         </div>
         """, unsafe_allow_html=True)
 
-# ==================== ANA BAŞLIK ====================
+# ANA BAŞLIK
 st.markdown('<h1 class="main-title">🎰 RULET SİMÜLASYONU 🎰</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #cccccc;">Matematik Proje Ödevi - Kumarın Matematiği</p>', unsafe_allow_html=True)
 
-# ==================== ANA EKRAN - 3 KOLON ====================
+# Bakiye sıfırlandı mı kontrol et
+if st.session_state.bakiye <= 0:
+    # ==================== EĞİTİM EKRANI ====================
+    st.markdown("""
+    <div style="text-align: center; padding: 30px;">
+        <h1 style="color: red;">⚠️ BAKİYEN SIFIRLANDI! ⚠️</h1>
+        <h3>Şimdi kumarın matematiğini öğrenme zamanı...</h3>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Oyun istatistikleri
+    if len(st.session_state.tur_sonuclari) > 0:
+        df = pd.DataFrame(st.session_state.tur_sonuclari)
+        toplam_oynanan = len(df)
+        kazanma_sayisi = len(df[df["kazanc"] > 0])
+        kaybetme_sayisi = len(df[df["kazanc"] < 0])
+        toplam_yatirilan = df["bahis_miktari"].sum()
+        
+        st.markdown("### 📊 OYUN SONU İSTATİSTİKLERİN")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Toplam Tur", toplam_oynanan)
+        with col2:
+            st.metric("Kazanma", kazanma_sayisi)
+        with col3:
+            st.metric("Kaybetme", kaybetme_sayisi)
+        with col4:
+            st.metric("Toplam Yatırılan", f"{toplam_yatirilan:.0f} TL")
+    
+    # 1. OLASILIKLAR
+    st.markdown("---")
+    st.markdown("## 📊 1. RULET OLASILIKLARI")
+    
+    prob_data = {
+        "Bahis": ["Kırmızı/Siyah", "Tek/Çift", "Düzine", "Tek Sayı", "Yeşil"],
+        "Kazanma İhtimali": ["18/37 = %48.65", "18/37 = %48.65", "12/37 = %32.43", "1/37 = %2.70", "1/37 = %2.70"],
+        "Kazanç": ["1x", "1x", "2x", "35x", "36x"]
+    }
+    st.dataframe(pd.DataFrame(prob_data), use_container_width=True, hide_index=True)
+    
+    # 2. BEKLENEN DEĞER
+    st.markdown("---")
+    st.markdown("## 🔢 2. BEKLENEN DEĞER (E)")
+    st.markdown("""
+    **Formül:** `E = (Kazanma × Kazanç) - (Kaybetme × Kayıp)`
+    
+    **Kırmızı için:** `(18/37 × 1) - (19/37 × 1) = -0.027`
+    
+    > 🚨 **Her 1 TL için BEKLENEN KAYIP = 2.7 kuruş!**
+    """)
+    
+    # 3. HOUSE EDGE
+    st.markdown("---")
+    st.markdown("## 🏦 3. CASİNO AVANTAJI")
+    st.markdown("""
+    - **Avrupa Ruleti:** %2.7
+    - **Amerikan Ruleti:** %5.26
+    
+    > Her 100 TL bahisten casino **2.70 TL** garanti kazanır!
+    """)
+    
+    # 4. PSİKOLOJİK TUZAKLAR
+    st.markdown("---")
+    st.markdown("## 🧠 4. PSİKOLOJİK TUZAKLAR")
+    st.markdown("""
+    **1. Kumarbaz Yanılgısı:** "Arka arkaya kırmızı geldi, şimdi siyah gelmeli" → YANLIŞ!
+    
+    **2. Kayıptan Kaçınma:** Kaybettikçe daha çok oynama isteği
+    
+    **3. Yakın Kaçırma:** "Neredeyse kazanıyordum" hissi sizi kandırır
+    """)
+    
+    # 5. UZUN VADE
+    st.markdown("---")
+    st.markdown("## 📉 5. UZUN VADEDE KAYBETME RİSKİ")
+    
+    risk_data = {
+        "Tur Sayısı": [10, 50, 100, 500, 1000],
+        "Kaybetme Riski": ["%24", "%76", "%92", "%98", "%99.99"]
+    }
+    st.dataframe(pd.DataFrame(risk_data), use_container_width=True, hide_index=True)
+    
+    # SONUÇ
+    st.markdown("---")
+    st.markdown("""
+    ## 🎯 MATEMATİK PROJE ÖDEVİ SONUCU
+    
+    ### Hipotez:
+    > "Kumar oyunları matematiksel olarak oyuncunun aleyhinedir"
+    
+    ### Kanıt:
+    1. Beklenen Değer NEGATİF: **E = -0.027**
+    2. Casino avantajı (House Edge) her zaman vardır: **%2.7**
+    3. Uzun vadede kaybetme olasılığı **%99.99**
+    
+    ### Sonuç:
+    > 🚨 **KISA VADEDE KAZANABİLİRSİN AMA UZUN VADEDE MATEMATİKSEL OLARAK KAYBEDERSİN!**
+    """)
+    
+    # RESET BUTONU
+    st.markdown("---")
+    if st.button("🔄 YENİDEN DENE", use_container_width=True):
+        st.session_state.bakiye = 1000
+        st.session_state.baslangic_bakiye = 1000
+        st.session_state.tur_sayisi = 0
+        st.session_state.bakiye_gecmisi = [1000]
+        st.session_state.son_sayi = None
+        st.session_state.son_renk = None
+        st.session_state.son_kazanc = 0
+        st.session_state.tur_sonuclari = []
+        st.session_state.toplam_kar = [0]
+        st.session_state.bakiye_secildi = False
+        st.rerun()
+    
+    st.stop()  # Burada dur, normal oyunu gösterme
+
+# ==================== NORMAL OYUN EKRANI (Bakiye > 0 ise) ====================
 col_rulet, col_bahis, col_grafik = st.columns([1, 1.2, 1.5])
 
 with col_rulet:
@@ -207,11 +310,6 @@ with col_rulet:
     rulet_gorseli(st.session_state.son_sayi, st.session_state.son_renk)
     if st.session_state.son_sayi is not None:
         st.info(f"📊 **Son Sonuç:** {st.session_state.son_sayi} - {st.session_state.son_renk}")
-        if st.session_state.son_kazanc is not None:
-            if st.session_state.son_kazanc > 0:
-                st.success(f"✨ +{st.session_state.son_kazanc} TL Kazandın!")
-            else:
-                st.error(f"💔 {st.session_state.son_kazanc} TL Kaybettin!")
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col_bahis:
@@ -240,8 +338,8 @@ with col_bahis:
     bahis_miktari = st.number_input(
         "💰 Bahis Miktarı (TL):",
         min_value=10,
-        max_value=st.session_state.bakiye if st.session_state.bakiye > 0 else 10,
-        value=min(100, st.session_state.bakiye) if st.session_state.bakiye > 0 else 10,
+        max_value=st.session_state.bakiye,
+        value=min(100, st.session_state.bakiye),
         step=10
     )
     
@@ -257,29 +355,28 @@ with col_grafik:
         y = st.session_state.bakiye_gecmisi
         ax.plot(x, y, 'o-', color='gold', linewidth=2, markersize=6)
         ax.fill_between(x, y, alpha=0.3, color='gold')
-        ax.axhline(y=st.session_state.bakiye_gecmisi[0], color='gray', linestyle='--', alpha=0.5, label='Başlangıç')
         ax.set_xlabel('Tur Sayısı')
         ax.set_ylabel('Bakiye (TL)')
-        ax.set_title('Oynadıkça Bakiyen Nasıl Değişiyor?')
+        ax.set_title('Bakiyenin Zamanla Değişimi')
         ax.grid(True, alpha=0.3)
-        ax.legend()
-        ax.set_facecolor('#1a1a2e')
         st.pyplot(fig)
     else:
         st.info("Oynamaya başlayınca grafik burada görünecek.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ==================== OYUN MANTIĞI ====================
-if oyna and st.session_state.bakiye >= bahis_miktari and st.session_state.bakiye > 0:
+# OYUN MANTIĞI
+if oyna and st.session_state.bakiye >= bahis_miktari:
     st.session_state.tur_sayisi += 1
     tur = st.session_state.tur_sayisi
     
-    with st.spinner("🎡 Rulet çarkı dönüyor..."):
+    with st.spinner("🎡 Çark dönüyor..."):
         time.sleep(0.5)
         sonuc = rulet_cevir()
     
+    # Bahsi düş
     st.session_state.bakiye -= bahis_miktari
     
+    # Kazanç kontrolü
     kazandi_mi, carpan = kazanma_kontrolu(bahis_turu, bahis_degeri, sonuc)
     
     if kazandi_mi:
@@ -287,316 +384,31 @@ if oyna and st.session_state.bakiye >= bahis_miktari and st.session_state.bakiye
         st.session_state.bakiye += odeme
         net = odeme - bahis_miktari
         st.session_state.son_kazanc = net
-        kazanc_mesaji = f"🎉 KAZANDIN! +{net} TL"
+        st.success(f"🎉 KAZANDIN! +{net} TL")
     else:
         st.session_state.son_kazanc = -bahis_miktari
-        kazanc_mesaji = f"💀 KAYBETTİN! -{bahis_miktari} TL"
+        st.error(f"💀 KAYBETTİN! -{bahis_miktari} TL")
     
-    if len(st.session_state.toplam_kar) == 0:
-        st.session_state.toplam_kar.append(st.session_state.son_kazanc)
-    else:
-        st.session_state.toplam_kar.append(st.session_state.toplam_kar[-1] + st.session_state.son_kazanc)
-    
+    # Kaydet
     st.session_state.son_sayi = sonuc["sayi"]
     st.session_state.son_renk = sonuc["renk"]
     st.session_state.bakiye_gecmisi.append(st.session_state.bakiye)
     st.session_state.tur_sonuclari.append({
         "tur": tur,
-        "bahis_turu": bahis_turu,
-        "bahis_degeri": bahis_degeri,
-        "bahis_miktari": bahis_miktari,
-        "gelen_sayi": sonuc["sayi"],
-        "gelen_renk": sonuc["renk"],
+        "bahis": bahis_miktari,
+        "gelen": sonuc["sayi"],
         "kazanc": st.session_state.son_kazanc,
         "bakiye": st.session_state.bakiye
     })
+    st.session_state.toplam_kar.append(st.session_state.toplam_kar[-1] + st.session_state.son_kazanc)
     
-    if kazanc_mesaji.startswith("🎉"):
-        st.success(kazanc_mesaji)
-    else:
-        st.error(kazanc_mesaji)
-    st.info(f"🎯 **Rulet Sonucu:** {sonuc['sayi']} - {sonuc['renk']}")
+    st.info(f"🎯 **Sonuç:** {sonuc['sayi']} - {sonuc['renk']}")
     st.rerun()
 
-# ==================== İSTATİSTİKLER BÖLÜMÜ ====================
-if st.session_state.bakiye > 0:
-    st.markdown("---")
-    st.markdown("## 🔬 OYUN İSTATİSTİKLERİN")
-    
-    col_stat1, col_stat2 = st.columns(2)
-    
-    with col_stat1:
-        st.markdown('<div class="casino-card">', unsafe_allow_html=True)
-        st.subheader("📊 OYUN İSTATİSTİKLERİN")
-        if len(st.session_state.tur_sonuclari) > 0:
-            df = pd.DataFrame(st.session_state.tur_sonuclari)
-            
-            toplam_oynanan = len(df)
-            toplam_kayip = df[df["kazanc"] < 0]["kazanc"].sum() if len(df[df["kazanc"] < 0]) > 0 else 0
-            toplam_kazanc = df[df["kazanc"] > 0]["kazanc"].sum() if len(df[df["kazanc"] > 0]) > 0 else 0
-            kazanma_sayisi = len(df[df["kazanc"] > 0])
-            kaybetme_sayisi = len(df[df["kazanc"] < 0])
-            kazanma_orani = (kazanma_sayisi / toplam_oynanan) * 100 if toplam_oynanan > 0 else 0
-            
-            metric_col1, metric_col2, metric_col3 = st.columns(3)
-            with metric_col1:
-                st.metric("Toplam Oynanan Tur", toplam_oynanan)
-                st.metric("Kazanma Oranı", f"%{kazanma_orani:.1f}")
-            with metric_col2:
-                st.metric("Toplam Kazanç", f"+{toplam_kazanc:.0f} TL" if toplam_kazanc > 0 else f"{toplam_kazanc:.0f} TL")
-                st.metric("Kazanma Sayısı", kazanma_sayisi)
-            with metric_col3:
-                st.metric("Toplam Kayıp", f"{toplam_kayip:.0f} TL")
-                st.metric("Kaybetme Sayısı", kaybetme_sayisi)
-            
-            st.metric("📈 Net Kar/Zarar", f"{st.session_state.bakiye - st.session_state.baslangic_bakiye:.0f} TL", 
-                      delta=f"{((st.session_state.bakiye - st.session_state.baslangic_bakiye) / st.session_state.baslangic_bakiye * 100):.1f}%")
-            
-            st.markdown("**📋 Son 10 Oyun:**")
-            st.dataframe(df.tail(10)[["tur", "bahis_turu", "bahis_miktari", "gelen_sayi", "kazanc", "bakiye"]], 
-                         use_container_width=True)
-        else:
-            st.info("Henüz oyun oynamadınız. Çarkı çevirerek başlayın!")
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col_stat2:
-        st.markdown('<div class="casino-card">', unsafe_allow_html=True)
-        st.subheader("📉 KÜMÜLATİF KAR/ZARAR GRAFİĞİ")
-        if len(st.session_state.toplam_kar) > 1:
-            fig_kar, ax_kar = plt.subplots(figsize=(8, 4))
-            x_kar = range(len(st.session_state.toplam_kar))
-            y_kar = st.session_state.toplam_kar
-            
-            colors = ['green' if val >= 0 else 'red' for val in y_kar]
-            ax_kar.bar(x_kar, y_kar, color=colors, alpha=0.7, width=0.8)
-            ax_kar.axhline(y=0, color='gray', linestyle='-', linewidth=1)
-            ax_kar.plot(x_kar, y_kar, 'b-o', linewidth=1.5, markersize=4, alpha=0.5)
-            
-            ax_kar.set_xlabel('Tur Sayısı')
-            ax_kar.set_ylabel('Kümülatif Kar/Zarar (TL)')
-            ax_kar.set_title('Oynadıkça Toplam Kar/Zarar Durumun')
-            ax_kar.grid(True, alpha=0.3)
-            
-            ax_kar.fill_between(x_kar, y_kar, 0, where=(np.array(y_kar) >= 0), 
-                                color='green', alpha=0.2, label='Kâr Bölgesi')
-            ax_kar.fill_between(x_kar, y_kar, 0, where=(np.array(y_kar) <= 0), 
-                                color='red', alpha=0.2, label='Zarar Bölgesi')
-            ax_kar.legend(loc='upper left')
-            
-            st.pyplot(fig_kar)
-            
-            toplam_kar_zarar = st.session_state.toplam_kar[-1] if st.session_state.toplam_kar else 0
-            if toplam_kar_zarar > 0:
-                st.success(f"🎉 **Toplam Kârınız:** +{toplam_kar_zarar:.0f} TL")
-            elif toplam_kar_zarar < 0:
-                st.error(f"💸 **Toplam Zararınız:** {toplam_kar_zarar:.0f} TL")
-            else:
-                st.info("📊 **Toplam Kar/Zarar:** 0 TL (Başabaş)")
-        else:
-            st.info("Oynamaya başlayınca kar/zarar grafiği burada görünecek.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# ==================== BAKİYE SIFIRLANINCA EĞİTİM EKRANI (SADECE BURADA GÖSTER) ====================
-if st.session_state.bakiye <= 0:
-    # Tüm ana içeriği temizle ve sadece eğitim ekranını göster
-    st.empty()
-    
-    st.markdown("""
-    <div style="text-align: center; padding: 50px;">
-        <h1 style="color: red; font-size: 48px;">⚠️ BAKİYEN SIFIRLANDI! ⚠️</h1>
-        <p style="font-size: 24px;">Şimdi kumarın matematiğini öğrenme zamanı...</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Oyun istatistikleri
-    if len(st.session_state.tur_sonuclari) > 0:
-        df = pd.DataFrame(st.session_state.tur_sonuclari)
-        toplam_oynanan = len(df)
-        kazanma_sayisi = len(df[df["kazanc"] > 0])
-        kaybetme_sayisi = len(df[df["kazanc"] < 0])
-        toplam_yatirilan = df["bahis_miktari"].sum()
-        toplam_kayip = df[df["kazanc"] < 0]["kazanc"].sum() if len(df[df["kazanc"] < 0]) > 0 else 0
-        toplam_kazanc = df[df["kazanc"] > 0]["kazanc"].sum() if len(df[df["kazanc"] > 0]) > 0 else 0
-        
-        st.markdown("## 📊 OYUN SONU İSTATİSTİKLERİN")
-        col1, col2, col3, col4, col5 = st.columns(5)
-        with col1:
-            st.metric("Toplam Tur", toplam_oynanan)
-        with col2:
-            st.metric("Kazanma Sayısı", kazanma_sayisi)
-        with col3:
-            st.metric("Kaybetme Sayısı", kaybetme_sayisi)
-        with col4:
-            st.metric("Toplam Yatırılan", f"{toplam_yatirilan:.0f} TL")
-        with col5:
-            net_sonuc = st.session_state.bakiye - st.session_state.baslangic_bakiye
-            st.metric("Net Sonuç", f"{net_sonuc:.0f} TL", delta=f"{net_sonuc:.0f} TL")
-        
-        kazanma_orani = (kazanma_sayisi / toplam_oynanan * 100) if toplam_oynanan > 0 else 0
-        st.warning(f"🎯 **Senin Kazanma Oranın:** %{kazanma_orani:.1f} | **Rulet Teorik Oranı:** %48.65")
-    
-    # ==================== MATEMATİK EĞİTİM BÖLÜMÜ ====================
-    st.markdown("---")
-    st.markdown("# 🎓 KUMARIN MATEMATİĞİ (Proje Konusu)")
-    
-    # 1. BÖLÜM: OLASILIKLAR
-    st.markdown('<div class="egitim-card">', unsafe_allow_html=True)
-    st.markdown("## 📊 1. KAZANMA OLASILIKLARI")
-    
-    col_prob1, col_prob2 = st.columns(2)
-    
-    with col_prob1:
-        prob_data = {
-            "Bahis Türü": ["Kırmızı/Siyah", "Tek/Çift", "Düşük/Yüksek", "Düzine", "Sütun", "Tek Sayı", "Yeşil"],
-            "Kazanma İhtimali": ["18/37 = %48.65", "18/37 = %48.65", "18/37 = %48.65", "12/37 = %32.43", "12/37 = %32.43", "1/37 = %2.70", "1/37 = %2.70"],
-            "Kazanç Çarpanı": ["1x", "1x", "1x", "2x", "2x", "35x", "36x"]
-        }
-        prob_df = pd.DataFrame(prob_data)
-        st.dataframe(prob_df, use_container_width=True, hide_index=True)
-    
-    with col_prob2:
-        fig_prob, ax_prob = plt.subplots(figsize=(8, 5))
-        bahisler = ["Kırmızı", "Düzine", "Tek Sayı"]
-        olasiliklar = [48.65, 32.43, 2.70]
-        renkler = ['red', 'orange', 'green']
-        ax_prob.bar(bahisler, olasiliklar, color=renkler, alpha=0.7)
-        ax_prob.set_ylabel('Kazanma Olasılığı (%)')
-        ax_prob.set_title('Farklı Bahis Türlerinde Kazanma İhtimali')
-        ax_prob.set_ylim(0, 60)
-        for i, v in enumerate(olasiliklar):
-            ax_prob.text(i, v + 1, f"%{v}", ha='center', fontweight='bold')
-        ax_prob.grid(True, alpha=0.3)
-        st.pyplot(fig_prob)
-    
-    st.markdown("""
-    > 📌 **Not:** Toplam 37 sayı vardır (0-36). Yeşil 0 sayısı casinonun avantajını oluşturur.
-    """)
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # 2. BÖLÜM: BEKLENEN DEĞER
-    st.markdown('<div class="egitim-card">', unsafe_allow_html=True)
-    st.markdown("## 🔢 2. BEKLENEN DEĞER (EXPECTED VALUE)")
-    
-    col_ev1, col_ev2 = st.columns(2)
-    
-    with col_ev1:
-        st.markdown("""
-        ### Formül:
-        `E = (Kazanma Olasılığı × Kazanç) - (Kaybetme Olasılığı × Kayıp)`
-        
-        ### Kırmızı bahsi için hesap:
-        - Kazanma: `18/37 = 0.4865` × `(+1)` = **+0.4865**
-        - Kaybetme: `19/37 = 0.5135` × `(-1)` = **-0.5135**
-        
-        ### SONUÇ:
-        > `E = 0.4865 - 0.5135 = **-0.027**`
-        
-        **Yani her 1 TL bahis için BEKLENEN KAYIP = 2.7 kuruş!**
-        """)
-    
-    with col_ev2:
-        fig_ev, ax_ev = plt.subplots(figsize=(8, 4))
-        bahisler = [10, 50, 100, 500, 1000]
-        beklenen_kayip = [b * 0.027 for b in bahisler]
-        ax_ev.bar(range(len(bahisler)), beklenen_kayip, color='red', alpha=0.7, edgecolor='darkred')
-        ax_ev.set_xticks(range(len(bahisler)))
-        ax_ev.set_xticklabels([f"{b} TL" for b in bahisler])
-        ax_ev.set_ylabel('Beklenen Kayıp (TL)')
-        ax_ev.set_xlabel('Yatırılan Bahis')
-        ax_ev.set_title('BEKLENEN KAYIP GRAFİĞİ')
-        ax_ev.grid(True, alpha=0.3)
-        for i, v in enumerate(beklenen_kayip):
-            ax_ev.text(i, v + 0.5, f"{v:.2f} TL", ha='center', fontweight='bold')
-        st.pyplot(fig_ev)
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # 3. BÖLÜM: HOUSE EDGE
-    st.markdown('<div class="egitim-card">', unsafe_allow_html=True)
-    st.markdown("## 🏦 3. CASİNO AVANTAJI (HOUSE EDGE)")
-    
-    col_he1, col_he2 = st.columns(2)
-    
-    with col_he1:
-        st.markdown("""
-        ### House Edge = Casino'nun Garantili Kazancı
-        
-        **Avrupa Ruleti:** `1/37 = %2.7`
-        
-        **Amerikan Ruleti:** `2/38 = %5.26` (Çift sıfırlı)
-        
-        #### Ne Anlama Geliyor?
-        - Her 100 TL bahis yapıldığında **casino 2.70 TL kazanır**
-        - Her 1.000.000 TL'lik bahiste **casino 27.000 TL kazanır**
-        - Bu para **OYUNCULARIN KAYBETTİĞİ PARADIR!**
-        """)
-    
-    with col_he2:
-        fig_he, ax_he = plt.subplots(figsize=(8, 5))
-        labels = ['Oyuncu Kaybı', 'Casino Kazancı']
-        sizes = [97.3, 2.7]
-        colors = ['#ff4444', '#44ff44']
-        explode = (0, 0.1)
-        ax_he.pie(sizes, explode=explode, labels=labels, colors=colors,
-                autopct='%1.1f%%', shadow=True, startangle=90)
-        ax_he.set_title('100 TL Bahiste PARA DAĞILIMI')
-        st.pyplot(fig_he)
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # 4. BÖLÜM: PSİKOLOJİK TUZAKLAR
-    st.markdown('<div class="egitim-card">', unsafe_allow_html=True)
-    st.markdown("## 🧠 4. NEDEN KAYBEDERİZ? (Psikolojik Faktörler)")
-    
-    col_psy1, col_psy2 = st.columns(2)
-    
-    with col_psy1:
-        st.markdown("""
-        ### 1. **Kumarbaz Yanılgısı (Gambler's Fallacy)**
-        > "Arka arkaya 5 kırmızı geldi, şimdi mutlaka siyah gelmeli!"
-        
-        **GERÇEK:** Her çeviriş BAĞIMSIZDIR! Olasılık her zaman %48.65.
-        
-        ### 2. **Kayıptan Kaçınma (Loss Aversion)**
-        > "Kaybettiğim parayı geri kazanana kadar bırakmayacağım!"
-        
-        **GERÇEK:** Kaybetme acısı, kazanma sevincinden **2 KAT DAHA GÜÇLÜDÜR**.
-        """)
-    
-    with col_psy2:
-        st.markdown("""
-        ### 3. **Yakın Kaçırma Etkisi (Near Miss Effect)**
-        > "Bir sayı farkla kaçırdım, neredeyse kazanıyordum!"
-        
-        **GERÇEK:** Beyniniz "neredeyse kazandım" hissini gerçek kazanç gibi algılar.
-        
-        ### 4. **Batık Maliyet (Sunk Cost Fallacy)**
-        > "Şimdiye kadar çok para verdim, çekilirsem hepsi boşa gidecek!"
-        
-        **GERÇEK:** Geçmiş kayıplarınızı geri kazanma şansınız YOKTUR!
-        """)
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # 5. BÖLÜM: UZUN VADELİ KAYIP
-    st.markdown('<div class="egitim-card">', unsafe_allow_html=True)
-    st.markdown("## 📉 5. UZUN VADEDE NE OLUR?")
-    
-    col_long1, col_long2 = st.columns(2)
-    
-    with col_long1:
-        st.markdown("""
-        ### Büyük Sayılar Kanunu
-        Ne kadar çok oynarsan, gerçek olasılıklara o kadar yaklaşırsın.
-        
-        | Tur Sayısı | Kaybetme Riski |
-        |------------|----------------|
-        | 10 Tur | **%24** |
-        | 50 Tur | **%76** |
-        | 100 Tur | **%92** |
-        | 500 Tur | **%98** |
-        | 1000 Tur | **%99.99** |
-        
-        > ⚠️ **SONUÇ:** Uzun vadede KAYBETMEK MATEMATİKSEL ZORUNLULUKTUR!
-        """)
-    
-    with col_long2:
-        fig_long, ax_long = plt.subplots(figsize=(8, 4))
-        n_values =
+# ALT BİLGİ
+st.markdown("---")
+st.markdown("""
+<p style="text-align:center; color:gray; font-size:12px;">
+🎓 Matematik Proje Ödevi - Kumarın Matematiği | Eğitim Amaçlıdır
+</p>
+""", unsafe_allow_html=True)
