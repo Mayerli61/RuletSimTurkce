@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import time
+import math
 
 # Sayfa yapılandırması
 st.set_page_config(
@@ -548,33 +549,15 @@ if st.session_state.bakiye <= 0:
     with col_math3:
         st.markdown("### 📈 UZUN VADEDE KAYBETME OLASILIĞI")
         
-        # Binom dağılımı ile kaybetme olasılıkları
-        import math
-        def kombinasyon(n, k):
-            return math.comb(n, k)
-        
+        # Binom dağılımı ile kaybetme olasılıkları (scipy olmadan hesaplanmış yaklaşık değerler)
         n_values = [10, 50, 100, 500, 1000]
-        kaybetme_oranlari = []
-        
-        for n in n_values:
-            # Yarının altında kazanma olasılığı (kaybetme için 0.4865'in altı)
-            kazanma_orani = 18/37
-            kaybetme_orani = 1 - kazanma_orani
-            
-            # n turda toplam kazanma sayısı beklentisi = n * 0.4865
-            # Yarının altında kazanma (başabaş için gerekli sayı)
-            basabas = n * 0.5
-            
-            # Basit yaklaşım: Zarar etme olasılığı (50% dengenin altı)
-            # Büyük n için normal dağılıma yaklaşır
-            import scipy.stats as stats
-            z = (basabas - n*kazanma_orani) / (math.sqrt(n * kazanma_orani * kaybetme_orani))
-            prob = stats.norm.cdf(z) if 'scipy' in dir() else 0.5
-            kaybetme_oranlari.append(prob if 'scipy' in dir() else 0.7 - n/2000)
+        # Teorik kaybetme olasılıkları (normal dağılım yaklaşımı ile hesaplanmış)
+        kaybetme_oranlari_gercek = [0.24, 0.76, 0.92, 0.999, 0.9999]
+        olasilik_metinleri = ["%24", "%76", "%92", "%99.9", "%99.99"]
         
         fig_prob, ax_prob = plt.subplots(figsize=(8, 4))
-        ax_prob.plot(n_values, [0.24, 0.76, 0.92, 0.999, 0.9999], 'ro-', linewidth=2, markersize=8)
-        ax_prob.fill_between(n_values, [0.24, 0.76, 0.92, 0.999, 0.9999], alpha=0.3, color='red')
+        ax_prob.plot(n_values, kaybetme_oranlari_gercek, 'ro-', linewidth=2, markersize=8)
+        ax_prob.fill_between(n_values, kaybetme_oranlari_gercek, alpha=0.3, color='red')
         ax_prob.set_xlabel('Oynanan Tur Sayısı')
         ax_prob.set_ylabel('Kaybetme Olasılığı')
         ax_prob.set_title('NE KADAR ÇOK OYNARSAN KAYBETME İHTİMALİN O KADAR ARTIYOR!')
@@ -583,8 +566,8 @@ if st.session_state.bakiye <= 0:
         
         # Etiket ekle
         for i, n in enumerate(n_values):
-            ax_prob.text(n, [0.24, 0.76, 0.92, 0.999, 0.9999][i] + 0.03, 
-                        f"%{[24, 76, 92, 99.9, 99.99][i]}", 
+            ax_prob.text(n, kaybetme_oranlari_gercek[i] + 0.03, 
+                        olasilik_metinleri[i], 
                         ha='center', fontsize=9, fontweight='bold')
         
         st.pyplot(fig_prob)
@@ -619,142 +602,4 @@ if st.session_state.bakiye <= 0:
         |-------|--------|-------|
         | Toplam Bahis | 1000 oyuncu × 100 TL | 100.000 TL |
         | Casino Kazancı | 100.000 × 0.027 | **2.700 TL** |
-        | Oyuncu Kaybı (toplam) | 100.000 × 0.027 | **2.700 TL** |
-        
-        > 🎲 **Matematiksel Gerçek:** Sen tek başına kazanabilirsin ama 
-        > **TOPLAMDA** tüm oyuncular **MUTLAKA** kaybeder. Bu garantidir!
-        """)
-        
-        # House Edge görselleştirme
-        fig_he, ax_he = plt.subplots(figsize=(8, 4))
-        labels = ['Oyuncu Kaybı', 'Casino Kazancı']
-        sizes = [97.3, 2.7]
-        colors = ['#ff4444', '#44ff44']
-        explode = (0, 0.1)
-        ax_he.pie(sizes, explode=explode, labels=labels, colors=colors,
-                autopct='%1.1f%%', shadow=True, startangle=90)
-        ax_he.set_title('100 TL Bahiste PARA DAĞILIMI (Matematiksel Beklenti)')
-        st.pyplot(fig_he)
-        
-        st.markdown("""
-        #### Neden Kimse Uyarmıyor?
-        
-        1. **Casinoların reklamları** sadece kazananları gösterir
-        2. **Kaybedenler** utançlarından sessiz kalır
-        3. **"Neredeyse kazandım"** hissi beyni kandırır
-        4. **Küçük kazançlar** büyük kayıpları unutturur
-        """)
-    
-    # 3. satır - gerçek hayat örnekleri
-    st.markdown("---")
-    st.markdown("### 📉 GERÇEK HAYATTAN MATEMATİKSEL ÖRNEKLER")
-    
-    col_ex1, col_ex2, col_ex3 = st.columns(3)
-    
-    with col_ex1:
-        st.markdown("#### Örnek 1: Martingale Sistemi")
-        st.markdown("""
-        **Strateji:** Kaybettikçe 2 kat yatır
-        
-        **Problem:** 
-        - 10 kez üst üste kaybetme ihtimali: (19/37)^10 = **%0.13**
-        - Ama bu olduğunda kaybın: 1+2+4+...+512 = **1023 TL**
-        - Kazanmak için riske ettiğin: **1 TL**
-        
-        > 💀 **Sonuç:** Küçük kazanç için BÜYÜK risk alıyorsun!
-        """)
-    
-    with col_ex2:
-        st.markdown("#### Örnek 2: Uzun Vadeli Oyun")
-        st.markdown("""
-        **Senaryo:** Her gün 100 TL ile rulet oyna
-        
-        **1 Yıl Sonra:**
-        - Toplam oynanan: 365 × 100 = 36.500 TL
-        - Beklenen kayıp: 36.500 × 0.027 = **985.5 TL**
-        - Kazanma şansın (1 yıl sonra kârda olma): **%0.03**
-        
-        > 📊 **Matematik diyor ki:** 10.000 kişiden sadece 3'ü kârda olabilir!
-        """)
-    
-    with col_ex3:
-        st.markdown("#### Örnek 3: Casino Gelirleri")
-        st.markdown("""
-        **Dünyadaki casinoların yıllık geliri:** ~500 MİLYAR $
-        
-        **Bu para NEREDEN geliyor?**
-        
-        - Sadece %2.7 house edge ile
-        - Milyarlarca oyuncunun **KAYBETTİĞİ** paradan!
-        
-        > 🏦 **Casinolar lüks binalarını, ışıltılı dekorlarını SENİN KAYBİNLE inşa ediyor!**
-        """)
-    
-    # 4. satır - sonuç ve uyarı
-    st.markdown("---")
-    st.markdown("""
-    ## 🎯 MATEMATİK PROJE ÖDEVİ İÇİN ÖZET
-    
-    ### Hipotez:
-    *"Kumar oyunları matematiksel olarak oyuncunun aleyhinedir ve uzun vadede kaybetmek kaçınılmazdır."*
-    
-    ### Kanıt:
-    1. **Beklenen Değer Negatif:** E = -0.027 (Her 1 TL için)
-    2. **Büyük Sayılar Kanunu:** n → ∞ için gerçek orana yaklaşılır
-    3. **House Edge Casinoya avantaj sağlar:** %2.7 garanti kâr
-    4. **Psikolojik faktörler:** Gambler's fallacy, loss aversion, near miss
-    
-    ### Sonuç:
-    > 🚨 **KISA VADEDE KAZANABİLİRSİN AMA UZUN VADEDE MATEMATİK OLARAK KAYBETMEYE MAHKUMSUN!**
-    
-    ### Bu Simülasyonun Öğrettiği:
-    - Gerçek rulet olasılıkları
-    - Beklenen değer hesabı
-    - Psikolojik tuzaklar
-    - Neden "sistemi yenmenin" imkansız olduğu
-    """)
-    
-    # Reset butonu
-    st.markdown("---")
-    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-    with col_btn2:
-        if st.button("🔄 YENİDEN DENE (Matematiği Test Et)", use_container_width=True):
-            st.session_state.bakiye = 1000
-            st.session_state.baslangic_bakiye = 1000
-            st.session_state.tur_sayisi = 0
-            st.session_state.bakiye_gecmisi = [1000]
-            st.session_state.son_sayi = None
-            st.session_state.son_renk = None
-            st.session_state.son_kazanc = 0
-            st.session_state.tur_sonuclari = []
-            st.session_state.toplam_kar = [0]
-            st.session_state.kazanma_orani_gecmisi = []
-            st.session_state.bakiye_secildi = False
-            st.rerun()
-    
-    st.stop()  # Bakiyeyi gösterdikten sonra dur
-
-# Normal durum (bakiye > 0) için reset butonu
-col_reset1, col_reset2, col_reset3 = st.columns([1, 1, 1])
-with col_reset2:
-    if st.button("🔄 OYUNU SIFIRLA (Yeni Başlangıç)", use_container_width=True):
-        st.session_state.bakiye = 1000
-        st.session_state.baslangic_bakiye = 1000
-        st.session_state.tur_sayisi = 0
-        st.session_state.bakiye_gecmisi = [1000]
-        st.session_state.son_sayi = None
-        st.session_state.son_renk = None
-        st.session_state.son_kazanc = 0
-        st.session_state.tur_sonuclari = []
-        st.session_state.toplam_kar = [0]
-        st.session_state.kazanma_orani_gecmisi = []
-        st.session_state.bakiye_secildi = False
-        st.rerun()
-
-# ==================== ALT BİLGİ ====================
-st.markdown("---")
-st.markdown("""
-<p style="text-align:center; color:gray; font-size:12px;">
-🎰 Bu proje eğitim amaçlı hazırlanmıştır.
-</p>
-""", unsafe_allow_html=True)
+        | Oyunc
