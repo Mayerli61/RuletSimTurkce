@@ -586,7 +586,7 @@ if st.session_state.bakiye <= 0:
     with col_math4:
         st.markdown("### 💰 CASİNO NASIL KAZANIR? (House Edge)")
         
-              st.markdown("""
+        st.markdown("""
         **House Edge (Casino Avantajı)** = Casinonun uzun vadede kazandığı ortalama para.
         
         #### Avrupa Ruleti: **%2.7**
